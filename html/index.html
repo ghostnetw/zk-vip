@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="script.js"></script>
+</head>
+<body>
+    <div id="zk-vip-container">
+        <div class="vip-bg"></div>
+        <div class="vip-panel">
+            <header>
+                <h1>ZK VIP SHOP</h1>
+                <span class="balance">💎 <span id="coin-count">4800</span> Coins</span>
+                <button id="close-btn">×</button>
+            </header>
+
+            <div class="vip-controls">
+                <label>Categoría:</label>
+                <select id="category">
+                    <option>Vehículos</option>
+                    <option>Armas</option>
+                    <option>Black Money</option>
+                </select>
+            </div>
+
+            <div class="vip-grid" id="item-list">
+                <div class="vip-card">
+                    <img src="https://img.icons8.com/pulsar-color/48/rockstar-games.png" alt="rmodc63amg">
+                    <h3>Mercedes C63 AMG</h3>
+                    <p>💎 50000</p>
+                    <button onclick="buyItem('rmodc63amg')">Comprar</button>
+                </div>
+       <div class="vip-card">
+        <img src="https://img.icons8.com/pulsar-color/48/rockstar-games.png" alt="sultanrs">
+        <h3>Sultan RS</h3>
+        <p>💎 32000</p>
+        <button onclick="buyItem('sultanrs')">Comprar</button>
+      </div>
+        <div class="vip-card">
+        <img src="https://img.icons8.com/pulsar-color/48/rockstar-games.png" alt="neo">
+        <h3>Neo</h3>
+        <p>💎 3200</p>
+        <button onclick="buyItem('neo')">Comprar</button>
+          </div>
+        <div class="vip-card">
+        <img src="https://img.icons8.com/pulsar-color/48/rockstar-games.png" alt="neo">
+        <h3>Neo</h3>
+        <p>💎 3200</p>
+        <button onclick="buyItem('neo')">Comprar</button>
+      </div>
+      <!-- Más tarjetas -->
+    </div>
+  </div>
+</div>
