@@ -101,7 +101,7 @@ $(function() {
             const name = item.name || 'unknown';
             const label = item.label || 'Item desconocido';
             const price = item.price || 0;
-            const imageUrl = item.image ? item.image : "https://img.icons8.com/pulsar-color/48/rockstar-games.png";
+            const imageUrl = item.image ? item.image : "https://img.icons8.com/dusk/50/ghost--v1.png";
             
             const card = $('<div class="vip-card">').html(`
                 <img src="${imageUrl}" alt="${label}">

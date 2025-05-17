@@ -5,6 +5,11 @@ author 'ZK'
 description 'Tienda VIP Futurista'
 version '1.0.0'
 
+dependencies {
+    'qb-core',
+    'ox_inventory'
+}
+
 ui_page 'html/index.html'
 
 files {
@@ -27,5 +32,6 @@ client_scripts {
 
 server_scripts {
     'config.lua', -- Load config again to be sure
+    'discord_logs.lua',
     'server.lua'
 }

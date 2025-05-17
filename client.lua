@@ -5,10 +5,11 @@ if not Config then
     Config = {}
     Config.CoinsItem = "vip_coin"
     Config.Items = {
-        { name = "rmodc63amg", label = "Amg-c63", price = 50000 },
-        { name = "sultanrs", label = "Sultan RS", price = 32000 },
+        { name = "adder", label = "adder", price = 50000 },
+        { name = "sultanrs", label = "sultanrs", price = 32000 },
         { name = "weapon_pistol", label = "Pistola", price = 800 },
-        { name = "black_money", label = "Dinero Negro", price = 1000 }
+        { name = "black_money", label = "Dinero Negro", price = 1000 },
+        { name = "neo", label = "Vysser Neo", price = 50000 }
     }
     print("[ZK-VIP] Config not loaded, using hardcoded values")
 else
@@ -80,7 +81,7 @@ end
 
 -- Define default test items if config isn't loaded
 local defaultItems = {
-    { name = "veh_kuruma", label = "Kuruma Blindado", price = 3200 },
+    { name = "kuruma", label = "Kuruma Blindado", price = 3200 },
     { name = "weapon_pistol", label = "Pistola", price = 800 },
     { name = "black_money", label = "Dinero Negro", price = 1000 }
 }
@@ -140,44 +141,45 @@ RegisterCommand("openvip", function(source, args, rawCommand)
     if not isOpen then
         print("[ZK-VIP] Opening menu...")
         
-        -- Set menu as open and focus NUI
-        isOpen = true
-        SetNuiFocus(true, true)
+        -- Get player coins
+        local coins = getPlayerCoins()
+        print("[ZK-VIP] Player has " .. coins .. " coins")
         
-        -- Get VIP coins and categories safely
-        local coins = 4800
-        local categories = {}
+        -- Get categories and items
+        local categories = getCategories()
+        print("[ZK-VIP] Found " .. #categories .. " categories")
         
-        -- Try to get actual values, but use defaults if fails
-        local success, result = pcall(function()
-            coins = getPlayerCoins()
-            categories = getCategories()
-            return true
-        end)
-        
-        if not success then
-            print("[ZK-VIP] Error while opening menu: ", result)
-            -- At minimum, create a simple category with default items
-            categories = {
-                { 
-                    name = "default", 
-                    label = "Artículos VIP", 
-                    items = defaultItems 
-                }
-            }
-        end
-        
-        -- Send NUI message to open the shop interface
+        -- Send everything to UI in a single message
         SendNUIMessage({
             type = "openVipShop",
             coins = coins,
             categories = categories
         })
         
-        print("[ZK-VIP] Menu opened with " .. #categories .. " categories")
-    else
-        print("[ZK-VIP] Menu already open")
+        -- Open menu
+        SetNuiFocus(true, true)
+        isOpen = true
     end
+end)
+
+-- Function to get player coins
+function getPlayerCoins()
+    local coins = 0
+    if exports.ox_inventory then
+        coins = exports.ox_inventory:GetItemCount(Config.CoinsItem)
+    end
+    return coins or 0
+end
+
+-- Add debug function to check inventory
+RegisterCommand("checkvipcoins", function(source, args, rawCommand)
+    local coins = getPlayerCoins()
+    print("[ZK-VIP] Debug: Player has " .. coins .. " VIP coins")
+    TriggerEvent('chat:addMessage', {
+        color = {0, 255, 0},
+        multiline = false,
+        args = {"VIP Shop", "You have " .. coins .. " VIP coins"}
+    })
 end, false)
 
 RegisterNUICallback("close", function(data, cb)
@@ -198,10 +200,37 @@ RegisterNUICallback("selectCategory", function(data, cb)
 end)
 
 RegisterNUICallback("buyItem", function(data, cb)
-    if isOpen then
-        TriggerServerEvent("zkvip:buyItem", data.item)
-        cb({})
+    print("[ZK-VIP] NUI requested purchase of item: " .. tostring(data.item))
+    if data.item then
+        TriggerEvent("zkvip:buyItem", data.item)
     end
+    cb({})
+end)
+
+RegisterNetEvent("zkvip:buyItem")
+AddEventHandler("zkvip:buyItem", function(itemName)
+    print("[ZK-VIP] Attempting to purchase: " .. itemName)
+    
+    -- Get current coins before purchase attempt
+    local currentCoins = getPlayerCoins()
+    print("[ZK-VIP] Current coins before purchase: " .. currentCoins)
+    
+    -- Find item price
+    local itemData = nil
+    for _, item in ipairs(Config.Items) do
+        if item.name == itemName then
+            itemData = item
+            break
+        end
+    end
+    
+    if itemData then
+        print("[ZK-VIP] Item price: " .. itemData.price .. " coins")
+    else
+        print("[ZK-VIP] ERROR: Item not found in config: " .. itemName)
+    end
+    
+    TriggerServerEvent("zkvip:buyItem", itemName)
 end)
 
 Citizen.CreateThread(function()
@@ -222,106 +251,4 @@ AddEventHandler("zkvip:closeShop", function()
         SendNUIMessage({ type = "closeVipShop" })
         isOpen = false
     end
-end)
-
-RegisterNetEvent("zkvip:spawnVehicle")
-AddEventHandler("zkvip:spawnVehicle", function(vehicleModel, armored)
-    -- First close the shop UI
-    if isOpen then
-        SetNuiFocus(false, false)
-        SendNUIMessage({ type = "closeVipShop" })
-        isOpen = false
-    end
-    
-    -- Get player position
-    local playerPed = PlayerPedId()
-    local coords = GetEntityCoords(playerPed)
-    
-    -- Request the vehicle model
-    local modelHash = GetHashKey(vehicleModel)
-    RequestModel(modelHash)
-    
-    -- Wait for model to load
-    local timeout = 0
-    while not HasModelLoaded(modelHash) and timeout < 30 do
-        timeout = timeout + 1
-        Citizen.Wait(100)
-    end
-    
-    if not HasModelLoaded(modelHash) then
-        TriggerEvent('ox_lib:notify', {
-            title = 'Error',
-            description = 'No se pudo cargar el modelo del vehículo',
-            type = 'error'
-        })
-        return
-    end
-    
-    -- Find a safe spawn position in front of the player
-    local spawnCoords = GetOffsetFromEntityInWorldCoords(playerPed, 0.0, 5.0, 0.0)
-    local heading = GetEntityHeading(playerPed)
-    
-    -- Spawn the vehicle
-    local vehicle = CreateVehicle(modelHash, spawnCoords.x, spawnCoords.y, spawnCoords.z, heading, true, false)
-    
-    -- Set the player as the driver
-    TaskWarpPedIntoVehicle(playerPed, vehicle, -1)
-    
-    -- Apply upgrades if it's an armored vehicle
-    if armored then
-        SetVehicleModKit(vehicle, 0)
-        SetVehicleMod(vehicle, 16, 4, false) -- Armor upgrade
-        SetVehicleMod(vehicle, 11, 3, false) -- Engine upgrade
-        SetVehicleMod(vehicle, 12, 2, false) -- Brakes upgrade
-        SetVehicleMod(vehicle, 13, 2, false) -- Transmission upgrade
-        SetVehicleWindowTint(vehicle, 1) -- Light smoke window tint
-    end
-    
-    -- Set as player owned
-    SetVehicleHasBeenOwnedByPlayer(vehicle, true)
-    
-    -- Set fuel level using ox_fuel if available
-    local success, error = pcall(function()
-        if exports['ox_fuel'] then
-            exports['ox_fuel']:SetFuel(vehicle, 100.0)
-            print("[ZK-VIP] Applied fuel to spawned vehicle")
-        end
-    end)
-    
-    if not success then
-        print("[ZK-VIP] No ox_fuel found or error: " .. tostring(error))
-    end
-    
-    -- Give vehicle keys using qbx_vehiclekeys
-    local plate = GetVehicleNumberPlateText(vehicle)
-    if plate then
-        -- Clean plate string
-        plate = string.gsub(plate, " ", "")
-        
-        -- Method 1 - Try direct export
-        success, error = pcall(function()
-            if exports['qbx_vehiclekeys'] then
-                exports['qbx_vehiclekeys']:GiveKeys(plate)
-                print("[ZK-VIP] Gave keys for plate: " .. plate .. " via export")
-                return true
-            end
-            return false
-        end)
-        
-        -- Method 2 - Try event if export failed
-        if not success or error == false then
-            TriggerServerEvent('qbx_vehiclekeys:server:AcquireVehicleKeys', plate)
-            print("[ZK-VIP] Gave keys for plate: " .. plate .. " via server event")
-        end
-    end
-    
-    -- Notification
-    TriggerEvent('ox_lib:notify', {
-        title = '¡Vehículo recibido!',
-        description = 'Tu nuevo vehículo VIP con llaves ha sido entregado',
-        type = 'success'
-    })
-    
-    -- Cleanup
-    SetModelAsNoLongerNeeded(modelHash)
 end)
