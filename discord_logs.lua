@@ -14,22 +14,29 @@ end
 
 local discordWebhookURL = "https://discord.com/api/webhooks/1331006923885252649/uHQkR0qa8sSopsAVvtwFYpwRcBPZdk-6OlMP-YcEYUVbFW6Tw4NfM2Of6C2WHwiuyCfz" -- Replace with your actual webhook URL
 
--- Configuration for images
-local serverUrl = "" -- Leave empty for relative URLs
-local defaultItemImage = "https://i.imgur.com/9QdqNXs.png"
+-- Configuration for images - must be publicly accessible URLs for Discord
+local defaultItemImage = "https://img.icons8.com/dusk/50/ghost--v1.png"
 
--- Vehicles image mappings - you can add more vehicles here as needed
+-- Vehicle images for Discord - updated with ghost icon
 local vehicleImages = {
-    adder = "https://i.imgur.com/9QdqNXs.png",
-    alpha = "https://i.imgur.com/9QdqNXs.png",
-    sultanrs = "https://i.imgur.com/9QdqNXs.png",
-    neo = "https://i.imgur.com/9QdqNXs.png",
-    neon = "https://i.imgur.com/9QdqNXs.png"
+    adder = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    alpha = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    sultanrs = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    neo = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    neon = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    b800 = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    granlb = "https://img.icons8.com/dusk/50/ghost--v1.png",
+    bugatti = "https://img.icons8.com/dusk/50/ghost--v1.png"
     -- Add more vehicles as needed
 }
 
--- Function to get item image URL from ox_inventory or vehicle list
+-- Function to get item image URL from ox_inventory or vehicle list - with ABSOLUTE URLs for Discord
 local function getItemImage(itemName)
+    -- If no item name provided, return default image
+    if not itemName or itemName == "" then
+        return defaultItemImage
+    end
+    
     -- Remove 'veh_' prefix for vehicles if present
     local isVehicle = false
     local itemNameClean = itemName
@@ -39,21 +46,16 @@ local function getItemImage(itemName)
         isVehicle = true
     end
     
-    -- If it's a vehicle, use vehicle images
+    -- If it's a vehicle, use vehicle images from our predefined list
     if isVehicle then
         return vehicleImages[itemNameClean] or defaultItemImage
+    elseif vehicleImages[itemName] then
+        -- Also check without the prefix
+        return vehicleImages[itemName] or defaultItemImage
     end
     
-    -- For regular items, use ox_inventory images
-    local inventoryImagePath = serverUrl .. "ox_inventory/web/images/" .. itemNameClean .. ".png"
-    
-    -- Special handling for weapons (they have a different prefix in ox_inventory)
-    if string.match(itemNameClean, "^weapon_") then
-        return inventoryImagePath
-    end
-    
-    -- Return the ox_inventory path for regular items
-    return inventoryImagePath
+    -- For all other items, use a generic image since Discord can't access relative URLs
+    return defaultItemImage
 end
 
 -- Function to get player's Discord ID
@@ -73,7 +75,7 @@ local function getPlayerAvatarUrl(src)
     if discordId then
         return "https://r2.fivemanage.com/rNuxARYnz7C0keGsVTuqt/" .. discordId .. "/" .. discordId .. ".png"
     end
-    return "https://i.imgur.com/9QdqNXs.png" -- Default avatar if Discord ID not found
+    return "https://img.icons8.com/dusk/50/ghost--v1.png" -- Default avatar if Discord ID not found
 end
 
 -- Function to format player info
@@ -103,82 +105,67 @@ local function getPlayerInfo(src)
         discord or "N/A")
 end
 
--- Function to send a message to Discord
--- message: The main content of the message
--- embed: (Optional) An embed object as per Discord webhook documentation
-function SendDiscordLog(message, embed)
-    -- Create a simple payload that is guaranteed to work
+-- Simplified function to send a message to Discord
+function SendDiscordLog(message, title, playerName, itemName, itemPrice, license)
+    -- Default values
+    title = title or "💰 VIP Purchase"
+    playerName = playerName or "Unknown Player"
+    itemName = itemName or "Unknown Item"
+    itemPrice = itemPrice or 0
+    license = license or "Unknown"
+    
+    -- Create a simple payload with minimal processing
+    local serverName = GetConvar("sv_hostname", "ZK-GH0ST")
+    local locationText = "📡 " .. serverName
+    
+    -- Create the discord payload
     local data = {
         content = "🛒 **VIP Shop: ** " .. message,
         username = "ZK-VIP System",
-        avatar_url = "https://i.imgur.com/9QdqNXs.png"
-    }
-    
-    -- Only add embeds if provided and keep it simple
-    if embed then
-        -- Extract player name if available
-        local playerName = "Unknown Player"
-        if embed.author and embed.author.name then
-            playerName = string.match(embed.author.name, "([^%s]+)")
-        end
-        
-        -- Extract license if available
-        local license = "Unknown"
-        if embed.fields and embed.fields[2] then
-            local fieldValue = embed.fields[2].value or ""
-            license = string.match(fieldValue, "FiveM License:** `([^`]+)`") or "Unknown"
-        end
-        
-        -- Get item details
-        local itemName = "Unknown Item"
-        local itemPrice = "0"
-        if embed.fields and embed.fields[1] then
-            local fieldValue = embed.fields[1].value or ""
-            itemName = string.match(fieldValue, "Name:** ([^\n]+)") or "Unknown Item"
-            itemPrice = string.match(fieldValue, "Price:** ([^\n]+)") or "0 coins"
-        end
-        
-        -- Get server info for location - safe method that won't cause errors
-        local serverName = GetConvar("sv_hostname", "Unknown Server")
-        local locationText = "📡 " .. serverName
-        
-        -- Timestamp for the transaction
-        local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-        
-        data.embeds = {{
-            title = "💰 VIP Purchase",
-            description = "✅ Transaction completed successfully",
-            color = 3066993,  -- Green color
-            fields = {
-                {
-                    name = "👤 Player",
-                    value = playerName,
-                    inline = true
+        avatar_url = "https://img.icons8.com/dusk/50/ghost--v1.png",
+        embeds = {
+            {
+                title = title,
+                description = "✅ Transaction completed successfully",
+                color = 3066993,  -- Green color
+                fields = {
+                    {
+                        name = "👤 Player",
+                        value = playerName,
+                        inline = true
+                    },
+                    {
+                        name = "🆔 License",
+                        value = "`" .. license .. "`",
+                        inline = true
+                    },
+                    {
+                        name = "🏷️ Item",
+                        value = itemName,
+                        inline = false
+                    },
+                    {
+                        name = "💵 Price",
+                        value = tostring(itemPrice) .. " VIP Coins",
+                        inline = true
+                    },
+                    {
+                        name = "📍 Server",
+                        value = locationText,
+                        inline = true
+                    }
                 },
-                {
-                    name = "🆔 License",
-                    value = "`" .. license .. "`",
-                    inline = true
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+                thumbnail = {
+                    url = getItemImage(itemName) or defaultItemImage
                 },
-                {
-                    name = "🏷️ Item",
-                    value = itemName,
-                    inline = true
-                },
-                {
-                    name = "💵 Price",
-                    value = itemPrice,
-                    inline = true
-                },
-                {
-                    name = "📍 Location",
-                    value = locationText,
-                    inline = true
+                footer = {
+                    text = "ZK-VIP System",
+                    icon_url = "https://img.icons8.com/dusk/50/ghost--v1.png"
                 }
-            },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        }}
-    end
+            }
+        }
+    }
 
     -- Convert to JSON with error handling
     local success, jsonData = pcall(json.encode, data)
@@ -201,72 +188,156 @@ function SendDiscordLog(message, embed)
 end
 
 -- Store the player source in the embed data for later use
-function CreatePurchaseEmbed(itemName, playerSrc, itemData)
-    -- Initialize variables with safe defaults
-    local playerName = "Unknown"
-    local avatarUrl = "https://i.imgur.com/9QdqNXs.png"
+-- Direct function to log a purchase to Discord with all details
+function LogPurchaseToDiscord(itemName, playerSrc, itemData)
+    -- Safety check for arguments
+    if not playerSrc then 
+        print("[ZK-VIP] ERROR: Invalid player source in LogPurchaseToDiscord")
+        return false
+    end
+
+    -- Get basic player info
+    local playerName = GetPlayerName(playerSrc) or "Unknown"
+    local license = "Unknown"
+    local avatarUrl = "https://img.icons8.com/dusk/50/ghost--v1.png"
     
-    -- Error handling for player source - must have a valid numeric player ID
-    local validSource = false
-    if playerSrc and type(playerSrc) == "number" and playerSrc > 0 then
-        if GetPlayerName(playerSrc) then
-            validSource = true
-            playerName = GetPlayerName(playerSrc) or "Unknown Player"
-            avatarUrl = getPlayerAvatarUrl(playerSrc) or "https://i.imgur.com/9QdqNXs.png"
+    -- Get player license directly with error handling
+    if playerSrc > 0 then
+        local identifiers = GetPlayerIdentifiers(playerSrc)
+        if identifiers then
+            for _, id in ipairs(identifiers) do
+                if string.match(id, "license:") then
+                    license = string.gsub(id, "license:", "")
+                    break
+                end
+            end
         end
     end
     
-    -- Error handling for itemData
-    local itemLabel = "Unknown Item"
-    local itemCategory = "Unknown Type"
-    local itemPrice = 0
-    
-    if itemData then
-        itemLabel = itemData.label or itemName or "Unknown Item"
-        itemCategory = itemData.category or "Vehicle"
-        itemPrice = itemData.price or 0
+    -- Get Discord avatar safely
+    local discordId = getPlayerDiscordId(playerSrc)
+    if discordId then
+        avatarUrl = "https://r2.fivemanage.com/rNuxARYnz7C0keGsVTuqt/" .. discordId .. "/" .. discordId .. ".png"
     end
     
-    -- Create the embed object
-    local embed = {
-        title = "VIP Shop Purchase",
-        color = 5763719, -- Green color
-        thumbnail = {
-            url = getItemImage(itemName or "")
-        },
-        author = {
-            name = playerName .. " purchased: " .. itemLabel,
-            icon_url = avatarUrl
-        },
-        description = "A purchase was made in the VIP shop",
-        fields = {
+    -- Get item details directly with validation
+    local itemLabel = itemName or "Unknown Item"
+    local itemCategory = "VIP Item"
+    local itemPrice = 0
+    
+    -- Safely extract item data
+    if itemData then
+        if type(itemData.label) == "string" then
+            itemLabel = itemData.label
+        end
+        
+        if type(itemData.category) == "string" then
+            itemCategory = itemData.category
+        end
+        
+        if type(itemData.price) == "number" then
+            itemPrice = itemData.price
+        end
+    end
+    
+    -- Debug info to console
+    print(string.format("[ZK-VIP] Purchase log - Player: %s, License: %s, Item: %s, Price: %d", 
+        playerName, license, itemLabel, itemPrice))
+    
+    -- Get server info
+    local serverName = GetConvar("sv_hostname", "ZK-GH0ST")
+    
+    -- Create a clean payload directly
+    local data = {
+        username = "ZK-VIP System",
+        avatar_url = "https://img.icons8.com/dusk/50/ghost--v1.png",
+        embeds = {
             {
-                name = "📦 Item Details",
-                value = "**Name:** " .. itemLabel .. 
-                       "\n**Type:** " .. itemCategory .. 
-                       "\n**Price:** " .. itemPrice .. " VIP Coins",
-                inline = true
-            },
-            {
-                name = "👤 Player Information",
-                value = "**Name:** " .. playerName .. "\n" .. getPlayerInfo(playerSrc or 0),
-                inline = true
+                title = "💰 VIP Purchase",
+                description = "✅ Transaction completed successfully",
+                color = 3066993, -- Green color
+                author = {
+                    name = playerName,
+                    icon_url = avatarUrl
+                },
+                fields = {
+                    {
+                        name = "👤 Player",
+                        value = playerName,
+                        inline = true
+                    },
+                    {
+                        name = "🆔 License",
+                        value = "`" .. license .. "`",
+                        inline = true
+                    },
+                    {
+                        name = "🏷️ Item",
+                        value = itemLabel,
+                        inline = false
+                    },
+                    {
+                        name = "💵 Price",
+                        value = tostring(itemPrice) .. " VIP Coins",
+                        inline = true
+                    },
+                    {
+                        name = "📍 Server",
+                        value = "📡 " .. serverName,
+                        inline = true
+                    }
+                },
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+                thumbnail = {
+                    url = getItemImage(itemName or "")
+                }
             }
-        },
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ", os.time()),
-        footer = {
-            text = "ZK-VIP System",
-            icon_url = "https://r2.fivemanage.com/rNuxARYnz7C0keGsVTuqt/logo(2).png"
         }
     }
     
-    -- Log the created embed
-    print("[ZK-VIP] Created purchase embed for item: " .. (itemName or "unknown"))
+    -- Convert to JSON with error handling
+    local success, jsonData = pcall(json.encode, data)
+    if not success then
+        print("[ZK-VIP] ERROR: Failed to encode JSON: " .. tostring(jsonData))
+        return
+    end
     
-    return embed
+    -- Send to Discord directly
+    PerformHttpRequest(discordWebhookURL, function(statusCode, text)
+        if statusCode == 200 or statusCode == 204 then
+            print("[ZK-VIP] Discord webhook sent successfully")
+        else
+            print("[ZK-VIP] Discord webhook failed with status code: " .. tostring(statusCode) .. ", response: " .. tostring(text))
+            print("[ZK-VIP] Webhook data: " .. jsonData)
+        end
+    end, 'POST', jsonData, { ['Content-Type'] = 'application/json' })
+    
+    -- Return true to indicate success
+    return true
 end
 
--- You can add more functions here for different types of logs if needed
+-- Legacy function name for backward compatibility
+function CreatePurchaseEmbed(itemName, playerSrc, itemData)
+    -- Just call the new function directly
+    return LogPurchaseToDiscord(itemName, playerSrc, itemData)
+end
+
+-- Add a test command to verify Discord logging works
+RegisterCommand('vip_test_discord', function(source, args)
+    -- Check if player is admin
+    if IsPlayerAceAllowed(source, 'command') then
+        local testItem = {
+            name = "test_item",
+            label = "Test Item",
+            price = 1000,
+            category = "testing"
+        }
+        LogPurchaseToDiscord("test_item", source, testItem)
+        TriggerClientEvent('QBCore:Notify', source, 'Discord test log sent!', 'success')
+    else
+        TriggerClientEvent('QBCore:Notify', source, 'You do not have permission to use this command', 'error')
+    end
+end, false)
 
 -- Example usage (for testing - remove in production):
 -- Citizen.CreateThread(function()

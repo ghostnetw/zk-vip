@@ -191,9 +191,16 @@ AddEventHandler("zkvip:buyItem", function(itemName)
                 type = 'success'
             })
             
-            -- Log to Discord using the enhanced CreatePurchaseEmbed function
-            local embed = CreatePurchaseEmbed(itemName, src, itemData)
-            SendDiscordLog("VIP Shop Purchase", embed)
+            -- Log purchase to Discord with direct function call
+            local playerName = GetPlayerName(src)
+            local messageText = playerName .. " purchased " .. (itemData.label or itemName)
+            
+            -- Call our improved logging function
+            LogPurchaseToDiscord(itemName, src, itemData)
+            
+            -- Print success to server console
+            print(string.format("[ZK-VIP] %s purchased %s for %d VIP coins", 
+                playerName, itemData.label or itemName, itemData.price or 0))
             return
         else
             print("[ZK-VIP] ERROR: Failed to process item reward: " .. tostring(result))
