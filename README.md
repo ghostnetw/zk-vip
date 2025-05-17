@@ -107,7 +107,7 @@ This resource is created by ZK-GH0ST.
 
 ## 💬 Support
 
-For support, join our Discord server: [YOUR_DISCORD_INVITE_HERE]
+For support, join our Discord server: zk-gh0st
 
 ---
 
